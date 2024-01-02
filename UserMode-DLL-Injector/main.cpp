@@ -2,7 +2,7 @@
 
 int main()
 {
-    const std::wstring processName = L"dcr3d_x64.exe";
+    const std::wstring processName = L"dcr3d_x64.exe"; //game name
     DWORD processId = GetProcessIdByName(processName.c_str());
     const char* dllPath = "C:\\Users\\Camle\\source\\repos\\CMOD-win11 internal\\x64\\Release\\CMOD Internal.dll"; // Replace with the path to your DLL
 
