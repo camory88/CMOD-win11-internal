@@ -1,11 +1,6 @@
 #include "memory.h"
-
-int main()
+bool inject(DWORD processId, const char* dllPath)
 {
-    const std::wstring processName = L"dcr3d_x64.exe"; //game name
-    DWORD processId = GetProcessIdByName(processName.c_str());
-    const char* dllPath = "C:\\Users\\Camle\\source\\repos\\CMOD-win11 internal\\x64\\Release\\CMOD Internal.dll"; // Replace with the path to your DLL
-
     // Open the target process for injection (e.g., Notepad.exe)
     HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId); // Replace 'processId' with the target process ID
 
@@ -24,7 +19,7 @@ int main()
     }
 
     // Write the DLL path to the allocated memory
-    if (!WriteProcessMemory(hProcess, remoteString, dllPath, strlen(dllPath) + 1, NULL)) 
+    if (!WriteProcessMemory(hProcess, remoteString, dllPath, strlen(dllPath) + 1, NULL))
     {
         MessageBoxA(0, "Failed to write DLL path to target process.", "CMOD-Injector ERROR", 0);
         VirtualFreeEx(hProcess, remoteString, 0, MEM_RELEASE);
@@ -60,7 +55,24 @@ int main()
     VirtualFreeEx(hProcess, remoteString, 0, MEM_RELEASE);
     CloseHandle(hThread);
     CloseHandle(hProcess);
-    MessageBoxA(0, "DLL injected successfully!", "CMOD-Injector Message", 0);
+}
+
+int main()
+{
+    const std::wstring processName = L"Notepad.exe"; //game name
+    DWORD processId = GetProcessIdByName(processName.c_str());
+    const char* dllPath = "C:\\Users\\Camle\\source\\repos\\CMOD-win11 internal\\x64\\Release\\CMOD Internal.dll"; // Replace with the path to your DLL
+
+    if (inject(processId, dllPath))
+    {
+        MessageBoxA(0, "DLL injected successfully!", "CMOD-Injector Message", 0);
+        return 0;
+    }
+    else
+    {
+        MessageBoxA(0, "DLL not injected!", "CMOD-Injector ERROR", 0);
+        return 0;
+    }
 
     return 0;
 }
