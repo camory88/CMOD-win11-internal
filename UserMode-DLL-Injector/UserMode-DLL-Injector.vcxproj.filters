@@ -20,7 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="memory.h">
+    <ClInclude Include="memory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="includes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
