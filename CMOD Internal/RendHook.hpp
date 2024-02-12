@@ -1,6 +1,21 @@
-#include "render.h"
-#include "GolbalVars.h"
+#pragma once
 
+#include <Windows.h>
+#include <string_view>
+#include <functional>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <stdlib.h>
+#include <math.h>
+#include "GolbalVars.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_dx11.h"
+#include "imgui/imgui_internal.h"
+#include <d3d11.h>
 
 
 float DrawOutlinedText(ImFont* pFont, const ImVec2& pos, float size, ImU32 color, bool center, const char* text, ...)
@@ -50,19 +65,23 @@ float DrawOutlinedText(ImFont* pFont, const ImVec2& pos, float size, ImU32 color
 	return y;
 }
 
-ImGuiWindow& BeginScene() {
-	ImGui_ImplDX11_NewFrame();
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-	ImGui::Begin(E("##scene"), nullptr, ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar);
+typedef HRESULT(WINAPI* PresentFunc)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
 
-	auto& io = ImGui::GetIO();
-	ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-	ImGui::SetWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y), ImGuiCond_Always);
+ID3D11Device* device = nullptr;
+ID3D11DeviceContext* immediateContext = nullptr;
+ID3D11RenderTargetView* renderTargetView = nullptr;
+HRESULT(*present_original)(IDXGISwapChain* swapChain, UINT syncInterval, UINT flags);
 
-	return *ImGui::GetCurrentWindow();
+VOID EndScene(ImGuiWindow& window) {
+	window.DrawList->PushClipRectFullScreen();
+	ImGui::End();
+	ImGui::Render();
 }
+WNDPROC oriWndProc = NULL;
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+bool dllLoaded = true;
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	if (getKeyDown(VK_INSERT))
@@ -78,39 +97,21 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return CallWindowProc(oriWndProc, hWnd, msg, wParam, lParam);
 }
 
+ImGuiWindow& BeginScene() {
+	ImGui_ImplDX11_NewFrame();
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+	ImGui::Begin(E("##scene"), nullptr, ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar);
 
+	auto& io = ImGui::GetIO();
+	ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+	ImGui::SetWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y), ImGuiCond_Always);
 
-#define SteamdllBase (DWORD64)GetModuleHandleA(E("GameOverlayRenderer64.dll"))
-VOID SteamHook()//calles creat hook function
-{
-	const char* Present_Hook_sig = E("48 89 6C 24 ?? 48 89 74 24 ?? 41 56 48 83 EC ?? 41 8B E8");
-	const char* Create_Hook_sig = E("48 89 5C 24 ?? 57 48 83 EC ?? 33 C0 48 89 44 24");
-
-	auto Present_Hook = NULL;
-	Present_Hook = util::ida_signature(SteamdllBase, Present_Hook_sig);
-
-	auto Create_Hook = NULL;
-	Create_Hook = util::ida_signature(SteamdllBase, Create_Hook_sig);
-
-	__int64(__fastcall * CreatHook)(unsigned __int64 a1, __int64 a2, unsigned __int64* a3, int a4);
-
-	CreatHook = (decltype(CreatHook))Create_Hook;
-	CreatHook(Present_Hook, (__int64)&present_hook, (unsigned __int64*)&present_original, 1);
+	return *ImGui::GetCurrentWindow();
 }
 
-#define DiscordDllBase (DWORD64)GetModuleHandleA(E("DiscordHook64.dll"))
-VOID DiscordHook()// Vtable swap
-{
-	//AllocConsole();
-	//FILE* f;
-	//freopen_s(&f, "CONOUT$", "w", stdout);
+ImFont* gameFont = NULL;
 
-	uint64_t addr = (uint64_t)((uintptr_t)GetModuleHandleA("DiscordHook64.dll") + 0xE9090);
-	if (addr == NULL)
-		return MessageBoxA(0, E("Discord Overlay not found!"), E("ERROR"), 0);
-	PresentFunc* discord_present = (PresentFunc*)addr;
-
-	present_original = *discord_present;
-
-	_InterlockedExchangePointer((volatile PVOID*)addr, present_hook);
-}
+VOID SteamHook(PresentFunc present_hook);
+VOID DiscordHook(PresentFunc present_hook);

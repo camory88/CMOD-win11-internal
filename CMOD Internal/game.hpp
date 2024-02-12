@@ -25,7 +25,7 @@ bool is_lobby()
 char* get_player_name(uint64_t* ent)
 {
 	if (o_getplayername == 0)
-		o_getplayername = (getplayername_fn)util::ida_signature(dwbase, E("40 53 48 83 EC 20 48 8B D9 E8 ? ? ? ? 48 63 43 38"));
+		o_getplayername = (getplayername_fn)util::ida_signature(dwbase, E("48 8D 0D 9D FC D5 00"));
 
 	return o_getplayername(ent);
 }

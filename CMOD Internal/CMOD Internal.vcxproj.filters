@@ -30,9 +30,6 @@
     <ClCompile Include="imgui\imgui_impl_dx11.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="render.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="signature.h">
@@ -44,7 +41,7 @@
     <ClInclude Include="GolbalVars.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="render.h">
+    <ClInclude Include="RendHook.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="mem.h">
