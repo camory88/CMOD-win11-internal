@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include "render.hpp"
+#include "render.h"
 #include <map>
 #include "mem.h"
 #include "game.hpp"
@@ -94,11 +94,28 @@ HRESULT __stdcall present_hook(IDXGISwapChain* swapChain, UINT SyncInterval, UIN
 	auto& window = BeginScene();
 	DrawOutlinedText(gameFont, ImVec2(5, 5), 13.0f, ImColor(255, 255, 255), false, E("%.8f"), ImGui::GetIO().Framerate);
 
+	
+
+
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(2);
 
 	ImGui::Begin(E("CMOD"), &MainMenu);
 	ImGui::Text(E("Hello World!"));
+
+	static bool test = false;
+	ImGui::Checkbox(E("BRUH"), &test);
+	
+	uint64_t* Local_PlayerPtr = *(uint64_t**)(dwbase + LocalPlayer);
+	Vector camAngle = *(Vector*)(Local_PlayerPtr + origin);
+
+	ImGui::Text(E("X: %i"), camAngle.x);
+	ImGui::Text(E("Y: %i"), camAngle.y);
+	ImGui::Text(E("Z: %i"), camAngle.z);
+
+	
+
+
 
 	if(is_lobby)
 		ImGui::Text(E("in lobby!"));
@@ -113,41 +130,6 @@ HRESULT __stdcall present_hook(IDXGISwapChain* swapChain, UINT SyncInterval, UIN
 
 	EndScene(window);
 	return present_original(swapChain, SyncInterval, Flags);
-}
-
-
-#define SteamdllBase (DWORD64)GetModuleHandleA(E("GameOverlayRenderer64.dll"))
-VOID SteamHook()//calles creat hook function
-{
-	const char* Present_Hook_sig = E("48 89 6C 24 ?? 48 89 74 24 ?? 41 56 48 83 EC ?? 41 8B E8");
-	const char* Create_Hook_sig = E("48 89 5C 24 ?? 57 48 83 EC ?? 33 C0 48 89 44 24");
-
-	auto Present_Hook = NULL;
-	Present_Hook = util::ida_signature(SteamdllBase, Present_Hook_sig);
-
-	auto Create_Hook = NULL;
-	Create_Hook = util::ida_signature(SteamdllBase, Create_Hook_sig);
-
-	__int64(__fastcall * CreatHook)(unsigned __int64 a1, __int64 a2, unsigned __int64* a3, int a4);
-
-	CreatHook = (decltype(CreatHook))Create_Hook;
-	CreatHook(Present_Hook, (__int64)&present_hook, (unsigned __int64*)&present_original, 1);
-}
-
-#define DiscordDllBase (DWORD64)GetModuleHandleA(E("DiscordHook64.dll"))
-BOOL DiscordHook()// Vtable swap
-{
-	//AllocConsole();
-	//FILE* f;
-	//freopen_s(&f, "CONOUT$", "w", stdout);
-	
-	uint64_t addr = (uint64_t)((uintptr_t)GetModuleHandleA("DiscordHook64.dll") + 0xE9090);
-	PresentFunc* discord_present = (PresentFunc*)addr;
-
-	present_original = *discord_present;
-
-	_InterlockedExchangePointer((volatile PVOID*)addr, present_hook);
-	return TRUE;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved)

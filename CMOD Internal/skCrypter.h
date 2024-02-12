@@ -135,3 +135,6 @@ namespace skc
 			constexpr static auto crypted = skc::skCrypter \
 				<sizeof(str) / sizeof(str[0]), key1, key2, skc::clean_type<decltype(str[0])>>((skc::clean_type<decltype(str[0])>*)str); \
 					return crypted; }()
+
+
+#define E skCrypt
