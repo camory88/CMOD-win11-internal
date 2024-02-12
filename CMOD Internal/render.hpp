@@ -65,6 +65,8 @@ float DrawOutlinedText(ImFont* pFont, const ImVec2& pos, float size, ImU32 color
 	return y;
 }
 
+typedef HRESULT(WINAPI* PresentFunc)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
+
 ID3D11Device* device = nullptr;
 ID3D11DeviceContext* immediateContext = nullptr;
 ID3D11RenderTargetView* renderTargetView = nullptr;
@@ -77,6 +79,9 @@ VOID EndScene(ImGuiWindow& window) {
 }
 WNDPROC oriWndProc = NULL;
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+bool dllLoaded = true;
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	if (getKeyDown(VK_INSERT))
