@@ -23,43 +23,16 @@ DWORD GetProcessIdByName(const wchar_t* processName)
     return 0;
 }
 
-bool CManualMap(const wchar_t* targetProcessName, const char* dllPath) {
-    // Find the process ID of the target process
-    PROCESSENTRY32 pe32;
-    pe32.dwSize = sizeof(PROCESSENTRY32);
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-    if (hSnapshot == INVALID_HANDLE_VALUE) {
-        return false;
-    }
-
-    DWORD targetProcessID = 0;
-
-    if (Process32First(hSnapshot, &pe32)) {
-        do {
-            if (_wcsicmp(pe32.szExeFile, targetProcessName) == 0) {
-                targetProcessID = pe32.th32ProcessID;
-                break;
-            }
-        } while (Process32Next(hSnapshot, &pe32));
-    }
-
-    CloseHandle(hSnapshot);
-
-    if (targetProcessID == 0) {
-        return FALSE; // Target process not found
-    }
-
+bool CManualMap(DWORD targetProcessID, const char* dllPath) {
+    
     // Open the target process
     HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ, FALSE, targetProcessID);
-
     if (hProcess == NULL) {
         return FALSE; // Failed to open target process
     }
 
     // Read the image headers of the DLL to be injected
     HANDLE hFile = CreateFileA(dllPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-
     if (hFile == INVALID_HANDLE_VALUE) {
         CloseHandle(hProcess);
         return false; // Failed to open DLL file
@@ -67,7 +40,6 @@ bool CManualMap(const wchar_t* targetProcessName, const char* dllPath) {
 
     DWORD fileSize = GetFileSize(hFile, NULL);
     LPVOID fileBuffer = VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-
     if (fileBuffer == NULL) {
         CloseHandle(hFile);
         CloseHandle(hProcess);
@@ -80,7 +52,6 @@ bool CManualMap(const wchar_t* targetProcessName, const char* dllPath) {
 
     // Allocate memory in the target process for the DLL path
     LPVOID remotePath = VirtualAllocEx(hProcess, NULL, MAX_PATH, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-
     if (remotePath == NULL) {
         VirtualFree(fileBuffer, 0, MEM_RELEASE);
         CloseHandle(hProcess);
@@ -92,7 +63,6 @@ bool CManualMap(const wchar_t* targetProcessName, const char* dllPath) {
 
     // Get the address of LoadLibraryA function in kernel32.dll
     LPVOID loadLibraryAddr = (LPVOID)GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryA");
-
     if (loadLibraryAddr == NULL) {
         VirtualFreeEx(hProcess, remotePath, 0, MEM_RELEASE);
         VirtualFree(fileBuffer, 0, MEM_RELEASE);
@@ -102,7 +72,6 @@ bool CManualMap(const wchar_t* targetProcessName, const char* dllPath) {
 
     // Create a remote thread in the target process to execute LoadLibraryA with the DLL path
     HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)loadLibraryAddr, remotePath, 0, NULL);
-
     if (hThread == NULL) {
         VirtualFreeEx(hProcess, remotePath, 0, MEM_RELEASE);
         VirtualFree(fileBuffer, 0, MEM_RELEASE);
@@ -181,32 +150,8 @@ bool CLoadLibrary(DWORD processId, const char* dllPath)
 }
 
 
-bool CHollowInject(const wchar_t* targetProcessName, const char* dllPath) {
-    // Find the process ID of the target process
-    PROCESSENTRY32 pe32;
-    pe32.dwSize = sizeof(PROCESSENTRY32);
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-    if (hSnapshot == INVALID_HANDLE_VALUE) {
-        return false;
-    }
-
-    DWORD targetProcessID = 0;
-
-    if (Process32First(hSnapshot, &pe32)) {
-        do {
-            if (_wcsicmp(pe32.szExeFile, targetProcessName) == 0) {
-                targetProcessID = pe32.th32ProcessID;
-                break;
-            }
-        } while (Process32Next(hSnapshot, &pe32));
-    }
-
-    CloseHandle(hSnapshot);
-
-    if (targetProcessID == 0) {
-        return false; // Target process not found
-    }
+bool CHollowInject(DWORD targetProcessID, const char* dllPath) {
+    
 
     // Open the target process
     HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ, FALSE, targetProcessID);
